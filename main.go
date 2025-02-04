@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync/atomic"
@@ -43,6 +44,7 @@ func main() {
 	var config = apiConfig{}
 	serverMux.Handle("GET /app/", http.StripPrefix("/app", config.middlewareMetricsInc(http.FileServer(http.Dir(".")))))
 	serverMux.HandleFunc("GET /api/healthz", handlerHealth)
+	serverMux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
 	serverMux.HandleFunc("POST /admin/reset", config.middlewareAddCFGContext(handlerFSHitsReset))
 	serverMux.HandleFunc("GET /admin/metrics", config.middlewareAddCFGContext(handlerFSHits))
 
@@ -65,4 +67,52 @@ func handlerFSHits(w http.ResponseWriter, req *http.Request, cfg *apiConfig) {
 
 func handlerFSHitsReset(w http.ResponseWriter, req *http.Request, cfg *apiConfig) {
 	cfg.fileserverHits.Add(-cfg.fileserverHits.Load())
+}
+
+func handlerValidateChirp(rw http.ResponseWriter, req *http.Request) {
+	type requestParam struct {
+		Body string `json:"body"`
+	}
+	type errReturnParam struct {
+		Error string `json:"error"`
+	}
+	type succReturnParam struct {
+		Valid bool `json:"valid"`
+	}
+	var reqDecoder = json.NewDecoder(req.Body)
+	var reqVal requestParam
+	var err = reqDecoder.Decode(&reqVal)
+	if err != nil {
+		fmt.Println("error occured decoind a API request (Validate Chrip)")
+		fmt.Println(err)
+		rw.WriteHeader(500)
+		var marshaledError, err = json.Marshal(errReturnParam{Error: "string"})
+		if err != nil {
+			fmt.Println("SOMETHING WENT SERIOUSLY WRONG!", err)
+			rw.Write([]byte("SOMETHING WENT SERIOUSLY WRONG!"))
+			return
+
+		}
+		rw.Write(marshaledError)
+	}
+	if len(reqVal.Body) > 139 {
+		rw.WriteHeader(400)
+		var marshaledError, err = json.Marshal(errReturnParam{Error: "Chirp is too long"})
+		if err != nil {
+			fmt.Println("SOMETHING WENT SERIOUSLY WRONG!", err)
+		}
+		rw.Write(marshaledError)
+		return
+
+	}
+	res, err := json.Marshal(succReturnParam{Valid: true})
+	if err != nil {
+		fmt.Println("SOMETHING WENT SERIOUSLY WRONG!", err)
+		rw.WriteHeader(500)
+		rw.Write([]byte("error"))
+		return
+	}
+
+	rw.WriteHeader(200)
+	rw.Write(res)
 }
