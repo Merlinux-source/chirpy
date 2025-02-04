@@ -17,13 +17,52 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
 	"net/http"
+	"sync/atomic"
 )
+
+type apiConfig struct {
+	fileserverHits atomic.Int32
+}
+
+func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cfg.fileserverHits.Add(1)
+		next.ServeHTTP(w, r)
+	})
+}
+func (cfg *apiConfig) middlewareAddCFGContext(next func(http.ResponseWriter, *http.Request, *apiConfig)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		next(w, r, cfg)
+	}
+}
 
 func main() {
 	var serverMux = http.NewServeMux()
-	serverMux.Handle("/", http.FileServer(http.Dir(".")))
+	var config = apiConfig{}
+	serverMux.Handle("GET /app/", http.StripPrefix("/app", config.middlewareMetricsInc(http.FileServer(http.Dir(".")))))
+	serverMux.HandleFunc("GET /api/healthz", handlerHealth)
+	serverMux.HandleFunc("POST /admin/reset", config.middlewareAddCFGContext(handlerFSHitsReset))
+	serverMux.HandleFunc("GET /admin/metrics", config.middlewareAddCFGContext(handlerFSHits))
 
 	var httpServer = http.Server{Addr: ":8080", Handler: serverMux}
 	httpServer.ListenAndServe()
+}
+
+func handlerHealth(rw http.ResponseWriter, req *http.Request) {
+	rw.Header().Add("Content-Type", "text/plain; charset=utf-8")
+
+	rw.WriteHeader(200)
+	rw.Write([]byte("OK"))
+}
+
+func handlerFSHits(w http.ResponseWriter, req *http.Request, cfg *apiConfig) {
+	var response = fmt.Sprintf("    <p>Chirpy has been visited %d times!</p>", cfg.fileserverHits.Load())
+	w.Header().Add("Content-Type", "text/html")
+	w.Write([]byte("<html>\n  <body>\n    <h1>Welcome, Chirpy Admin</h1>\n" + response + "  </body>\n</html>"))
+}
+
+func handlerFSHitsReset(w http.ResponseWriter, req *http.Request, cfg *apiConfig) {
+	cfg.fileserverHits.Add(-cfg.fileserverHits.Load())
 }
