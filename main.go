@@ -16,10 +16,13 @@ limitations under the License.
 
 package main
 
-import "net/http"
+import (
+	"net/http"
+)
 
 func main() {
 	var serverMux = http.NewServeMux()
+	serverMux.Handle("/", http.FileServer(http.Dir(".")))
 
 	var httpServer = http.Server{Addr: ":8080", Handler: serverMux}
 	httpServer.ListenAndServe()
