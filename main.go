@@ -22,12 +22,9 @@ import (
 	"fmt"
 	"main/internal/database"
 	"net/http"
-	"net/mail"
 	"os"
 	"sync/atomic"
-	"time"
 
-	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
@@ -72,27 +69,6 @@ func main() {
 
 	var httpServer = http.Server{Addr: ":8080", Handler: serverMux}
 	httpServer.ListenAndServe()
-}
-
-func handlerHealth(rw http.ResponseWriter, req *http.Request) {
-	rw.Header().Add("Content-Type", "text/plain; charset=utf-8")
-
-	rw.WriteHeader(200)
-	rw.Write([]byte("OK"))
-}
-
-func handlerFSHits(w http.ResponseWriter, req *http.Request, cfg *apiConfig) {
-	var response = fmt.Sprintf("    <p>Chirpy has been visited %d times!</p>", cfg.fileserverHits.Load())
-	w.Header().Add("Content-Type", "text/html")
-	w.Write([]byte("<html>\n  <body>\n    <h1>Welcome, Chirpy Admin</h1>\n" + response + "  </body>\n</html>"))
-}
-
-func handlerFSHitsReset(w http.ResponseWriter, req *http.Request, cfg *apiConfig) {
-	cfg.fileserverHits.Add(-cfg.fileserverHits.Load())
-	err := cfg.query.ClearUsers(req.Context())
-	if err != nil {
-		fmt.Println(err)
-	}
 }
 
 func handlerValidateChirp(rw http.ResponseWriter, req *http.Request) {
@@ -141,55 +117,4 @@ func handlerValidateChirp(rw http.ResponseWriter, req *http.Request) {
 
 	rw.WriteHeader(200)
 	rw.Write(res)
-}
-
-func handlerCreateUser(rw http.ResponseWriter, r *http.Request, cfg *apiConfig) {
-	var err error
-	type requestForm struct {
-		Email string `json:"email"`
-	}
-	type response struct {
-		Id        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Email     string    `json:"email"`
-	}
-
-	var reqVal requestForm
-	rDecoder := json.NewDecoder(r.Body)
-	err = rDecoder.Decode(&reqVal)
-	if err != nil {
-		fmt.Println("error occured handlerCreateUser -> decode request", err)
-		rw.WriteHeader(400)
-		rw.Write([]byte("{\"error\":\"api usage.\"}"))
-		return
-	}
-	if len(reqVal.Email) < 1 {
-		fmt.Println("user submited empty mail")
-		return
-	}
-	mailAddr, err := mail.ParseAddress(reqVal.Email)
-	if err != nil {
-		fmt.Println("error occured handlerCreateUser -> validate email", err)
-		rw.WriteHeader(400)
-		rw.Write([]byte("{\"error\":\"invalid email.\"}"))
-		return
-	}
-
-	user, err := cfg.query.CreateUser(r.Context(), mailAddr.Address)
-	if err != nil {
-		fmt.Println("error occured handlerCreateUser -> Create user", err)
-		rw.WriteHeader(400)
-		rw.Write([]byte("{\"error\":\"could not create user.\"}"))
-		return
-	}
-	rw.WriteHeader(201)
-	result, err := json.Marshal(response{Id: user.ID, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt, Email: user.Email})
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	rw.Write(result)
-	return
 }
