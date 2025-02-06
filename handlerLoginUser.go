@@ -1,0 +1,85 @@
+/*
+ * Copyright 2025 Merlinux-source
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package main
+
+import (
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/google/uuid"
+	"main/internal/auth"
+	"net/http"
+	"net/mail"
+	"time"
+)
+
+func handlerLoginUser(writer http.ResponseWriter, request *http.Request, config *apiConfig) {
+	var err error
+	type requestUser struct {
+		Password string `json:"password"`
+		Email    string `json:"email"`
+	}
+	type response struct {
+		Id        uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Email     string    `json:"email"`
+	}
+	var reqVal requestUser
+	var reqDecoder *json.Decoder
+
+	reqDecoder = json.NewDecoder(request.Body)
+	err = reqDecoder.Decode(&reqVal) // validate post data
+	if err != nil {
+		fmt.Println("error decoding json payload", err.Error())
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	validEmail, err := mail.ParseAddress(reqVal.Email) // validate email input
+	if err != nil {
+		fmt.Println("error parsing email", err.Error())
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	user, err := config.query.GetUserByEmail(request.Context(), validEmail.Address) // validate user password
+	if err != nil {
+		fmt.Println("error getting user", err.Error())
+		if errors.Is(err, sql.ErrNoRows) {
+			writer.WriteHeader(http.StatusNotFound)
+			return
+		}
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = auth.CheckPasswordHash(reqVal.Password, user.HashedPassword)
+	if err != nil {
+		writer.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// authorization successful
+	bytes, err := json.Marshal(response{Id: user.ID, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt, Email: user.Email})
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	_, _ = writer.Write(bytes)
+}

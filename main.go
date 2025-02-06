@@ -48,7 +48,7 @@ func (cfg *apiConfig) middlewareAddCFGContext(next func(http.ResponseWriter, *ht
 func main() {
 	var serverMux = http.NewServeMux()
 	var config = apiConfig{}
-	godotenv.Load()
+	_ = godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -65,6 +65,7 @@ func main() {
 	serverMux.HandleFunc("POST /admin/reset", config.middlewareAddCFGContext(handlerFSHitsReset))
 	serverMux.HandleFunc("GET /admin/metrics", config.middlewareAddCFGContext(handlerFSHits))
 	serverMux.HandleFunc("POST /api/users", config.middlewareAddCFGContext(handlerCreateUser))
+	serverMux.HandleFunc("POST /api/login", config.middlewareAddCFGContext(handlerLoginUser))
 
 	var httpServer = http.Server{Addr: ":8080", Handler: serverMux}
 	err = httpServer.ListenAndServe()
@@ -81,7 +82,7 @@ func validateChirp(chirp string) (valid bool) {
 }
 
 func sanitizeChirp(chirp string) (cleanChirp string) {
-	var badWords = []string{ // this can be used for a regex list aswell.
+	var badWords = []string{ // this can be used for a regex list as well.
 		"kerfuffle",
 		"sharbert",
 		"fornax",

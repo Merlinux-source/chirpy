@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Samuel Kemper
+ * Copyright 2025 Merlinux-source
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,8 @@ import (
 )
 
 const clearChirps = `-- name: ClearChirps :exec
-DELETE FROM chirps
+DELETE
+FROM chirps
 `
 
 func (q *Queries) ClearChirps(ctx context.Context) error {
@@ -38,7 +39,8 @@ func (q *Queries) ClearChirps(ctx context.Context) error {
 }
 
 const createChirp = `-- name: CreateChirp :one
-INSERT INTO chirps (body, user_id) VALUES ($1,$2) RETURNING id, created_at, updated_at, body, user_id
+INSERT INTO chirps (body, user_id)
+VALUES ($1, $2) RETURNING id, created_at, updated_at, body, user_id
 `
 
 type CreateChirpParams struct {
@@ -60,7 +62,9 @@ func (q *Queries) CreateChirp(ctx context.Context, arg CreateChirpParams) (Chirp
 }
 
 const deleteChirp = `-- name: DeleteChirp :exec
-DELETE FROM chirps WHERE id = $1
+DELETE
+FROM chirps
+WHERE id = $1
 `
 
 func (q *Queries) DeleteChirp(ctx context.Context, id uuid.UUID) error {
@@ -69,7 +73,9 @@ func (q *Queries) DeleteChirp(ctx context.Context, id uuid.UUID) error {
 }
 
 const getChirpById = `-- name: GetChirpById :one
-SELECT id, created_at, updated_at, body, user_id FROM chirps WHERE id = $1
+SELECT id, created_at, updated_at, body, user_id
+FROM chirps
+WHERE id = $1
 `
 
 func (q *Queries) GetChirpById(ctx context.Context, id uuid.UUID) (Chirp, error) {
@@ -86,7 +92,9 @@ func (q *Queries) GetChirpById(ctx context.Context, id uuid.UUID) (Chirp, error)
 }
 
 const getChirpsByUserId = `-- name: GetChirpsByUserId :many
-SELECT id, created_at, updated_at, body, user_id FROM chirps WHERE user_id = $1
+SELECT id, created_at, updated_at, body, user_id
+FROM chirps
+WHERE user_id = $1
 `
 
 func (q *Queries) GetChirpsByUserId(ctx context.Context, userID uuid.UUID) ([]Chirp, error) {
@@ -118,8 +126,46 @@ func (q *Queries) GetChirpsByUserId(ctx context.Context, userID uuid.UUID) ([]Ch
 	return items, nil
 }
 
+const getChrips = `-- name: GetChrips :many
+SELECT id, created_at, updated_at, body, user_id
+FROM chirps
+ORDER BY created_at ASC
+`
+
+func (q *Queries) GetChrips(ctx context.Context) ([]Chirp, error) {
+	rows, err := q.db.QueryContext(ctx, getChrips)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Chirp
+	for rows.Next() {
+		var i Chirp
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getChripsByUserIdFromTo = `-- name: GetChripsByUserIdFromTo :many
-SELECT id, created_at, updated_at, body, user_id FROM chirps WHERE user_id = $1 AND updated_at BETWEEN $2 AND $3
+SELECT id, created_at, updated_at, body, user_id
+FROM chirps
+WHERE user_id = $1
+  AND updated_at BETWEEN $2 AND $3
 `
 
 type GetChripsByUserIdFromToParams struct {
@@ -158,7 +204,9 @@ func (q *Queries) GetChripsByUserIdFromTo(ctx context.Context, arg GetChripsByUs
 }
 
 const getChripsFromTo = `-- name: GetChripsFromTo :many
-SELECT id, created_at, updated_at, body, user_id FROM chirps WHERE updated_at BETWEEN $1 AND $2
+SELECT id, created_at, updated_at, body, user_id
+FROM chirps
+WHERE updated_at BETWEEN $1 AND $2
 `
 
 type GetChripsFromToParams struct {

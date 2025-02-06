@@ -46,6 +46,6 @@ func handlerListChirps(writer http.ResponseWriter, request *http.Request, config
 		writer.WriteHeader(http.StatusInternalServerError)
 	}
 	writer.Header().Set("Content-Type", "application/json")
-	writer.Write(bytes)
+	_, _ = writer.Write(bytes)
 	return
 }

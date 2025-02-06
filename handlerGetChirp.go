@@ -45,6 +45,6 @@ func handlerGetChirp(writer http.ResponseWriter, request *http.Request, config *
 		return
 	}
 	writer.WriteHeader(http.StatusOK)
-	writer.Write(res)
+	_, _ = writer.Write(res)
 	return
 }

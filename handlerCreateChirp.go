@@ -32,11 +32,11 @@ func handlerCreateChirp(w http.ResponseWriter, r *http.Request, conf *apiConfig)
 		UserId uuid.UUID `json:"user_id"`
 	}
 	type result struct {
-		Id         uuid.UUID `json:"id"`
-		CreatedAt  time.Time `json:"created_at"`
-		Updated_at time.Time `json:"updated_at"`
-		Body       string    `json:"body"`
-		UserID     uuid.UUID `json:"user_id"`
+		Id        uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Body      string    `json:"body"`
+		UserID    uuid.UUID `json:"user_id"`
 	}
 
 	var reqVal reqParam
@@ -50,7 +50,7 @@ func handlerCreateChirp(w http.ResponseWriter, r *http.Request, conf *apiConfig)
 	valid = validateChirp(reqVal.Body)
 	if !valid {
 		w.WriteHeader(400)
-		w.Write([]byte("{\"error\": \"Chirp is too long\"}"))
+		_, _ = w.Write([]byte("{\"error\": \"Chirp is too long\"}"))
 		return
 	}
 
@@ -58,16 +58,16 @@ func handlerCreateChirp(w http.ResponseWriter, r *http.Request, conf *apiConfig)
 	chirp, err := conf.query.CreateChirp(r.Context(), database.CreateChirpParams{Body: cleanChirp, UserID: reqVal.UserId})
 	if err != nil {
 		w.WriteHeader(400)
-		w.Write([]byte("some error occured."))
+		_, _ = w.Write([]byte("some error occured."))
 		return
 	}
-	ret, err := json.Marshal(result{Id: chirp.ID, CreatedAt: chirp.CreatedAt, Updated_at: chirp.UpdatedAt, Body: chirp.Body, UserID: chirp.UserID})
+	ret, err := json.Marshal(result{Id: chirp.ID, CreatedAt: chirp.CreatedAt, UpdatedAt: chirp.UpdatedAt, Body: chirp.Body, UserID: chirp.UserID})
 	if err != nil {
 		w.WriteHeader(400)
-		w.Write([]byte("some error occured."))
+		_, _ = w.Write([]byte("some error occured."))
 		return
 	}
 	w.WriteHeader(201)
-	w.Write(ret)
+	_, _ = w.Write(ret)
 	return
 }
