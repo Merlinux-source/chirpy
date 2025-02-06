@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Merlinux-source
+ * Copyright 2025 Samuel Kemper
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,6 @@ VALUES ($1, $2) RETURNING *;
 -- name: ClearChirps :exec
 DELETE
 FROM chirps;
--- name: GetChrips :many
-SELECT *
-FROM chirps
-ORDER BY created_at ASC;
 -- name: GetChripsFromTo :many
 SELECT *
 FROM chirps
