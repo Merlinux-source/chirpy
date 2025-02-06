@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Samuel Kemper
+ * Copyright 2025 Merlinux-source
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,6 +62,8 @@ func main() {
 	serverMux.Handle("GET /app/", http.StripPrefix("/app", config.middlewareMetricsInc(http.FileServer(http.Dir(".")))))
 	serverMux.HandleFunc("GET /api/healthz", handlerHealth)
 	serverMux.HandleFunc("POST /api/chirps", config.middlewareAddCFGContext(handlerCreateChirp))
+	serverMux.HandleFunc("GET /api/chirps", config.middlewareAddCFGContext(handlerListChirps))
+	serverMux.HandleFunc("GET /api/chirps/{chirpID}", config.middlewareAddCFGContext(handlerGetChirp))
 	serverMux.HandleFunc("POST /admin/reset", config.middlewareAddCFGContext(handlerFSHitsReset))
 	serverMux.HandleFunc("GET /admin/metrics", config.middlewareAddCFGContext(handlerFSHits))
 	serverMux.HandleFunc("POST /api/users", config.middlewareAddCFGContext(handlerCreateUser))
