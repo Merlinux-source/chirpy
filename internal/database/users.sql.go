@@ -38,7 +38,7 @@ func (q *Queries) ClearUsers(ctx context.Context) error {
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, hashed_password)
-VALUES ( $1, $2)
+VALUES ($1, $2)
 RETURNING id, created_at, updated_at, email, hashed_password
 `
 
@@ -61,7 +61,9 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, created_at, updated_at, email, hashed_password FROM users WHERE email = $1
+SELECT id, created_at, updated_at, email, hashed_password
+FROM users
+WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -78,7 +80,9 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, created_at, updated_at, email, hashed_password FROM users WHERE id = $1
+SELECT id, created_at, updated_at, email, hashed_password
+FROM users
+WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {

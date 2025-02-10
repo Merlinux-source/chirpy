@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Samuel Kemper
+ * Copyright 2025 Merlinux-source
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,19 +18,23 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"main/internal/auth"
 	"main/internal/database"
 	"net/http"
 	"os"
 	"regexp"
 	"sync/atomic"
+	"time"
 )
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	query          *database.Queries
+	jwt_secret     string
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -50,6 +54,7 @@ func main() {
 	var config = apiConfig{}
 	_ = godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
+	jwtSecret := os.Getenv("JWT_SECRET")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		fmt.Println("FATAL ERROR, cannot connect to the database.")
@@ -58,6 +63,7 @@ func main() {
 
 	dbQueries := database.New(db)
 	config.query = dbQueries
+	config.jwt_secret = jwtSecret
 
 	serverMux.Handle("GET /app/", http.StripPrefix("/app", config.middlewareMetricsInc(http.FileServer(http.Dir(".")))))
 	serverMux.HandleFunc("GET /api/healthz", handlerHealth)
@@ -66,6 +72,7 @@ func main() {
 	serverMux.HandleFunc("GET /admin/metrics", config.middlewareAddCFGContext(handlerFSHits))
 	serverMux.HandleFunc("POST /api/users", config.middlewareAddCFGContext(handlerCreateUser))
 	serverMux.HandleFunc("POST /api/login", config.middlewareAddCFGContext(handlerLoginUser))
+	serverMux.HandleFunc("POST /api/refresh", config.middlewareAddCFGContext(handlerRefreshTokens))
 
 	var httpServer = http.Server{Addr: ":8080", Handler: serverMux}
 	err = httpServer.ListenAndServe()
@@ -75,6 +82,37 @@ func main() {
 		os.Exit(2)
 		return
 	}
+}
+
+func handlerRefreshTokens(writer http.ResponseWriter, request *http.Request, config *apiConfig) {
+	userToken, err := auth.GetBearerToken(request.Header)
+	if err != nil {
+		// token was not correctly supplied by the client.
+		writer.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	dbToken, err := config.query.GetToken(request.Context(), userToken)
+	if err != nil {
+		// token was not found in the database
+		writer.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	if dbToken.ExpiresAt.After(time.Now()) {
+		// token is expired
+		writer.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	response, err := json.Marshal(struct {
+		Token string `json:"token"`
+	}{dbToken.Token})
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	writer.Write(response)
+	return
 }
 
 func validateChirp(chirp string) (valid bool) {

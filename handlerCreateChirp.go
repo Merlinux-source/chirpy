@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
+	"main/internal/auth"
 	"main/internal/database"
 	"net/http"
 	"time"
@@ -27,9 +28,25 @@ import (
 
 func handlerCreateChirp(w http.ResponseWriter, r *http.Request, conf *apiConfig) {
 	var err error
+	// auth.
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	userUUID, err := auth.ValidateJWT(token, conf.jwt_secret)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	user, err := conf.query.GetUserByID(r.Context(), userUUID)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	type reqParam struct {
-		Body   string    `json:"body"`
-		UserId uuid.UUID `json:"user_id"`
+		Body string `json:"body"`
 	}
 	type result struct {
 		Id        uuid.UUID `json:"id"`
@@ -55,7 +72,7 @@ func handlerCreateChirp(w http.ResponseWriter, r *http.Request, conf *apiConfig)
 	}
 
 	cleanChirp = sanitizeChirp(reqVal.Body)
-	chirp, err := conf.query.CreateChirp(r.Context(), database.CreateChirpParams{Body: cleanChirp, UserID: reqVal.UserId})
+	chirp, err := conf.query.CreateChirp(r.Context(), database.CreateChirpParams{Body: cleanChirp, UserID: user.ID})
 	if err != nil {
 		w.WriteHeader(400)
 		_, _ = w.Write([]byte("some error occured."))

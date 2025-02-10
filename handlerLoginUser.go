@@ -39,9 +39,12 @@ func handlerLoginUser(writer http.ResponseWriter, request *http.Request, config 
 		CreatedAt time.Time `json:"created_at"`
 		UpdatedAt time.Time `json:"updated_at"`
 		Email     string    `json:"email"`
+		Token     string    `json:"token"`
+		Refresh   string    `json:"refresh_token"`
 	}
 	var reqVal requestUser
 	var reqDecoder *json.Decoder
+	var expiresIn = 3600
 
 	reqDecoder = json.NewDecoder(request.Body)
 	err = reqDecoder.Decode(&reqVal) // validate post data
@@ -72,9 +75,14 @@ func handlerLoginUser(writer http.ResponseWriter, request *http.Request, config 
 		writer.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-
+	jwt, err := auth.MakeJWT(user.ID, config.jwt_secret, time.Duration(expiresIn)*time.Second)
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		fmt.Println("error generating jwt token", err.Error())
+		return
+	}
 	// authorization successful
-	bytes, err := json.Marshal(response{Id: user.ID, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt, Email: user.Email})
+	bytes, err := json.Marshal(response{Id: user.ID, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt, Email: user.Email, Token: jwt})
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
