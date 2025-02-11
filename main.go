@@ -65,6 +65,8 @@ func main() {
 	serverMux.Handle("GET /app/", http.StripPrefix("/app", config.middlewareMetricsInc(http.FileServer(http.Dir(".")))))
 	serverMux.HandleFunc("GET /api/healthz", handlerHealth)
 	serverMux.HandleFunc("POST /api/chirps", config.middlewareAddCFGContext(handlerCreateChirp))
+	serverMux.HandleFunc("GET /api/chirps/{chirpID}", config.middlewareAddCFGContext(handlerGetChirp))
+	serverMux.HandleFunc("DELETE /api/chirps/{chirpID}", config.middlewareAddCFGContext(handlerDeleteChirp))
 	serverMux.HandleFunc("POST /admin/reset", config.middlewareAddCFGContext(handlerFSHitsReset))
 	serverMux.HandleFunc("GET /admin/metrics", config.middlewareAddCFGContext(handlerFSHits))
 	serverMux.HandleFunc("POST /api/users", config.middlewareAddCFGContext(handlerCreateUser))
