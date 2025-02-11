@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"main/internal/auth"
+	"main/internal/database"
 	"net/http"
 	"net/mail"
 	"time"
@@ -77,12 +78,24 @@ func handlerLoginUser(writer http.ResponseWriter, request *http.Request, config 
 	}
 	jwt, err := auth.MakeJWT(user.ID, config.jwt_secret, time.Duration(expiresIn)*time.Second)
 	if err != nil {
-		writer.WriteHeader(http.StatusInternalServerError)
 		fmt.Println("error generating jwt token", err.Error())
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	refreshTokenString, err := auth.MakeRefreshToken()
+	if err != nil {
+		fmt.Println("error generating refresh token", err.Error())
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	_, err = config.query.CreateRefreshToken(request.Context(), database.CreateRefreshTokenParams{refreshTokenString, user.ID})
+	if err != nil {
+		fmt.Println("error creating refresh token", err.Error())
+		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	// authorization successful
-	bytes, err := json.Marshal(response{Id: user.ID, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt, Email: user.Email, Token: jwt})
+	bytes, err := json.Marshal(response{Id: user.ID, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt, Email: user.Email, Token: jwt, Refresh: refreshTokenString})
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
