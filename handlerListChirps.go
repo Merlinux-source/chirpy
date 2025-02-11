@@ -17,25 +17,43 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"github.com/google/uuid"
 	"net/http"
 	"time"
 )
 
+type chirpsResponse struct {
+	Id        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
 func handlerListChirps(writer http.ResponseWriter, request *http.Request, config *apiConfig) {
+	authorIDString := request.URL.Query().Get("author_id")
+	authorID, uuidParseErr := uuid.Parse(authorIDString)
+
 	var chirps, err = config.query.GetChrips(request.Context())
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	type chirpsResponse struct {
-		Id        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Body      string    `json:"body"`
-		UserID    uuid.UUID `json:"user_id"`
+
+	if uuidParseErr == nil {
+		chirps, err = config.query.GetChirpsByUserId(request.Context(), authorID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writer.WriteHeader(http.StatusNotFound)
+				return
+			}
+			writer.WriteHeader(http.StatusInternalServerError)
+		}
 	}
+
 	writer.WriteHeader(http.StatusOK)
 	var response []chirpsResponse
 	for _, chirp := range chirps {
