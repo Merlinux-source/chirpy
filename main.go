@@ -42,6 +42,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	query          *database.Queries
 	jwt_secret     string
+	polka_key      string
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -62,6 +63,7 @@ func main() {
 	_ = godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
 	jwtSecret := os.Getenv("JWT_SECRET")
+	polkaAPIKey := os.Getenv("POKA_KEY")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		fmt.Println("FATAL ERROR, cannot connect to the database.")
@@ -71,11 +73,13 @@ func main() {
 	dbQueries := database.New(db)
 	config.query = dbQueries
 	config.jwt_secret = jwtSecret
+	config.polka_key = polkaAPIKey
 
 	serverMux.Handle("GET /app/", http.StripPrefix("/app", config.middlewareMetricsInc(http.FileServer(http.Dir(".")))))
 	serverMux.HandleFunc("GET /api/healthz", handlerHealth)
 	serverMux.HandleFunc("POST /api/chirps", config.middlewareAddCFGContext(handlerCreateChirp))
 	serverMux.HandleFunc("GET /api/chirps/{chirpID}", config.middlewareAddCFGContext(handlerGetChirp))
+	serverMux.HandleFunc("GET /api/chirps", config.middlewareAddCFGContext(handlerListChirps))
 	serverMux.HandleFunc("DELETE /api/chirps/{chirpID}", config.middlewareAddCFGContext(handlerDeleteChirp))
 	serverMux.HandleFunc("POST /admin/reset", config.middlewareAddCFGContext(handlerFSHitsReset))
 	serverMux.HandleFunc("GET /admin/metrics", config.middlewareAddCFGContext(handlerFSHits))

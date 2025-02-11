@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"main/internal/auth"
 	"net/http"
 )
 
@@ -34,7 +35,14 @@ func handlerPolkaWebhook(writer http.ResponseWriter, request *http.Request, conf
 		Data      InputData `json:"data"`
 	}
 	var input expectedInput
-	err := json.NewDecoder(request.Body).Decode(&input)
+
+	requestApiKey, err := auth.GetAPIKey(request.Header)
+	if err != nil || requestApiKey != config.polka_key {
+		writer.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	err = json.NewDecoder(request.Body).Decode(&input)
 	if err != nil {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
