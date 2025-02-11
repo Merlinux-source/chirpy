@@ -68,6 +68,7 @@ func main() {
 	serverMux.HandleFunc("POST /admin/reset", config.middlewareAddCFGContext(handlerFSHitsReset))
 	serverMux.HandleFunc("GET /admin/metrics", config.middlewareAddCFGContext(handlerFSHits))
 	serverMux.HandleFunc("POST /api/users", config.middlewareAddCFGContext(handlerCreateUser))
+	serverMux.HandleFunc("PUT /api/users", config.middlewareAddCFGContext(handlerChangeUser))
 	serverMux.HandleFunc("POST /api/login", config.middlewareAddCFGContext(handlerLoginUser))
 	serverMux.HandleFunc("POST /api/refresh", config.middlewareAddCFGContext(handlerRefreshTokens))
 	serverMux.HandleFunc("POST /api/revoke", config.middlewareAddCFGContext(handlerRevokeToken))
