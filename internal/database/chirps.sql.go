@@ -44,8 +44,8 @@ VALUES ($1, $2) RETURNING id, created_at, updated_at, body, user_id
 `
 
 type CreateChirpParams struct {
-	Body   string
-	UserID uuid.UUID
+	Body   string    `json:"body"`
+	UserID uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) CreateChirp(ctx context.Context, arg CreateChirpParams) (Chirp, error) {
@@ -169,9 +169,9 @@ WHERE user_id = $1
 `
 
 type GetChripsByUserIdFromToParams struct {
-	UserID      uuid.UUID
-	UpdatedAt   time.Time
-	UpdatedAt_2 time.Time
+	UserID      uuid.UUID `json:"user_id"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	UpdatedAt_2 time.Time `json:"updated_at_2"`
 }
 
 func (q *Queries) GetChripsByUserIdFromTo(ctx context.Context, arg GetChripsByUserIdFromToParams) ([]Chirp, error) {
@@ -210,8 +210,8 @@ WHERE updated_at BETWEEN $1 AND $2
 `
 
 type GetChripsFromToParams struct {
-	UpdatedAt   time.Time
-	UpdatedAt_2 time.Time
+	UpdatedAt   time.Time `json:"updated_at"`
+	UpdatedAt_2 time.Time `json:"updated_at_2"`
 }
 
 func (q *Queries) GetChripsFromTo(ctx context.Context, arg GetChripsFromToParams) ([]Chirp, error) {

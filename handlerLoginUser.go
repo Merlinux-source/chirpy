@@ -36,12 +36,13 @@ func handlerLoginUser(writer http.ResponseWriter, request *http.Request, config 
 		Email    string `json:"email"`
 	}
 	type response struct {
-		Id        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Email     string    `json:"email"`
-		Token     string    `json:"token"`
-		Refresh   string    `json:"refresh_token"`
+		Id          uuid.UUID `json:"id"`
+		CreatedAt   time.Time `json:"created_at"`
+		UpdatedAt   time.Time `json:"updated_at"`
+		Email       string    `json:"email"`
+		IsChirpyRed bool      `json:"is_chirpy_red"`
+		Token       string    `json:"token"`
+		Refresh     string    `json:"refresh_token"`
 	}
 	var reqVal requestUser
 	var reqDecoder *json.Decoder
@@ -95,7 +96,7 @@ func handlerLoginUser(writer http.ResponseWriter, request *http.Request, config 
 		return
 	}
 	// authorization successful
-	bytes, err := json.Marshal(response{Id: user.ID, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt, Email: user.Email, Token: jwt, Refresh: refreshTokenString})
+	bytes, err := json.Marshal(response{Id: user.ID, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt, Email: user.Email, Token: jwt, Refresh: refreshTokenString, IsChirpyRed: user.IsChirpyRed})
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return

@@ -19,3 +19,7 @@ SET email           = $2,
     hashed_password = $3
 WHERE id = $1
 RETURNING *;
+-- name: SetUserUpgradeStatusTrue :exec
+UPDATE users
+Set is_chirpy_red = TRUE
+WHERE id = $1;

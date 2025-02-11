@@ -19,12 +19,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	"main/internal/auth"
 	"main/internal/database"
 	"net/http"
 	"net/mail"
-	"time"
 )
 
 func handlerChangeUser(writer http.ResponseWriter, request *http.Request, config *apiConfig) {
@@ -77,12 +75,7 @@ func handlerChangeUser(writer http.ResponseWriter, request *http.Request, config
 		return
 	}
 
-	response, err := json.Marshal(struct {
-		Id        uuid.UUID `json:"id"`
-		Email     string    `json:"email"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-	}{user.ID, user.Email, user.CreatedAt, user.UpdatedAt})
+	response, err := json.Marshal(UserReturnObject{Id: user.ID, Email: user.Email, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt, IsChirpyRed: user.IsChirpyRed})
 	if err != nil {
 		fmt.Println("error in handlerChangeUser -> json encoding failed:", err)
 		writer.WriteHeader(http.StatusInternalServerError)

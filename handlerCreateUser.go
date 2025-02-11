@@ -23,9 +23,6 @@ import (
 	"main/internal/database"
 	"net/http"
 	"net/mail"
-	"time"
-
-	"github.com/google/uuid"
 )
 
 func handlerCreateUser(rw http.ResponseWriter, r *http.Request, cfg *apiConfig) {
@@ -34,13 +31,6 @@ func handlerCreateUser(rw http.ResponseWriter, r *http.Request, cfg *apiConfig) 
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
-	type response struct {
-		Id        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Email     string    `json:"email"`
-	}
-
 	var reqVal requestForm
 	rDecoder := json.NewDecoder(r.Body)
 	err = rDecoder.Decode(&reqVal)
@@ -86,7 +76,7 @@ func handlerCreateUser(rw http.ResponseWriter, r *http.Request, cfg *apiConfig) 
 
 	// create user successful.
 	rw.WriteHeader(201)
-	result, err := json.Marshal(response{Id: user.ID, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt, Email: user.Email})
+	result, err := json.Marshal(UserReturnObject{Id: user.ID, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt, Email: user.Email, IsChirpyRed: user.IsChirpyRed})
 	if err != nil {
 		fmt.Println(err)
 		return

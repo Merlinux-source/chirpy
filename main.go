@@ -19,6 +19,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"main/internal/database"
@@ -26,7 +27,16 @@ import (
 	"os"
 	"regexp"
 	"sync/atomic"
+	"time"
 )
+
+type UserReturnObject struct {
+	Id          uuid.UUID `json:"id"`
+	Email       string    `json:"email"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	IsChirpyRed bool      `json:"is_chirpy_red"`
+}
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
@@ -74,6 +84,7 @@ func main() {
 	serverMux.HandleFunc("POST /api/login", config.middlewareAddCFGContext(handlerLoginUser))
 	serverMux.HandleFunc("POST /api/refresh", config.middlewareAddCFGContext(handlerRefreshTokens))
 	serverMux.HandleFunc("POST /api/revoke", config.middlewareAddCFGContext(handlerRevokeToken))
+	serverMux.HandleFunc("POST /api/polka/webhooks", config.middlewareAddCFGContext(handlerPolkaWebhook))
 
 	var httpServer = http.Server{Addr: ":8080", Handler: serverMux}
 	err = httpServer.ListenAndServe()
