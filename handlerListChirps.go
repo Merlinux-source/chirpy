@@ -22,6 +22,7 @@ import (
 	"errors"
 	"github.com/google/uuid"
 	"net/http"
+	"sort"
 	"time"
 )
 
@@ -35,6 +36,7 @@ type chirpsResponse struct {
 
 func handlerListChirps(writer http.ResponseWriter, request *http.Request, config *apiConfig) {
 	authorIDString := request.URL.Query().Get("author_id")
+	chirpSortOrder := request.URL.Query().Get("sort")
 	authorID, uuidParseErr := uuid.Parse(authorIDString)
 
 	var chirps, err = config.query.GetChrips(request.Context())
@@ -52,6 +54,13 @@ func handlerListChirps(writer http.ResponseWriter, request *http.Request, config
 			}
 			writer.WriteHeader(http.StatusInternalServerError)
 		}
+	}
+
+	// handle sorting
+	if chirpSortOrder == "desc" {
+		sort.Slice(chirps, func(i, j int) bool {
+			return chirps[i].UpdatedAt.After(chirps[j].UpdatedAt)
+		})
 	}
 
 	writer.WriteHeader(http.StatusOK)
