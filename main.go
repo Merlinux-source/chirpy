@@ -18,10 +18,12 @@ package main
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/pressly/goose/v3"
 	"main/internal/database"
 	"net/http"
 	"os"
@@ -57,6 +59,9 @@ func (cfg *apiConfig) middlewareAddCFGContext(next func(http.ResponseWriter, *ht
 	}
 }
 
+//go:embed sql/schema/*.sql
+var embedMigrations embed.FS //
+
 func main() {
 	var serverMux = http.NewServeMux()
 	var config = apiConfig{}
@@ -70,6 +75,15 @@ func main() {
 		os.Exit(2)
 	}
 
+	_ = goose.SetDialect("postgres")
+	goose.SetBaseFS(embedMigrations)
+	if err := goose.Up(db, "sql/schema"); err != nil { //
+		fmt.Println("automatic database migrations failed. This may be a problem with the database. If you want automatic migrations, please ensure that the DB_URL provided user owns the specified database.")
+		fmt.Println(err)
+	}
+	if err := goose.Version(db, "migrations"); err != nil {
+		fmt.Println(err)
+	}
 	dbQueries := database.New(db)
 	config.query = dbQueries
 	config.jwt_secret = jwtSecret
